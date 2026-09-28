@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>News Tracker</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --text: #1d2330; --muted: #6b7280;
+    --line: #e5e7eb; --accent: #2f6fed; --accent-soft: #e8efff;
+    --pos: #16a34a; --neg: #dc2626; --neu: #6b7280; --unc: #d97706;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         background: var(--bg); color: var(--text); font-size: 15px; }
+  button { font: inherit; cursor: pointer; }
+  header { display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+           background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 19px; margin: 0; }
+  header .spacer { flex: 1; }
+  #saveState { font-size: 13px; color: var(--muted); }
+  #saveState.err { color: var(--neg); font-weight: 600; }
+  .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 7px 12px; }
+  .btn:hover { background: #f0f2f5; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { color: var(--neg); }
+  .btn.small { padding: 4px 9px; font-size: 13px; }
+
+  .layout { display: grid; grid-template-columns: 250px 1fr; min-height: calc(100vh - 57px); }
+  aside { background: var(--panel); border-right: 1px solid var(--line); padding: 14px 10px; }
+  aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 6px 10px 8px; }
+  .cat { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px;
+         cursor: pointer; user-select: none; }
+  .cat:hover { background: #f3f4f6; }
+  .cat.active { background: var(--accent-soft); font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .cat .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat .count { font-size: 12px; color: var(--muted); background: #eef0f3; border-radius: 10px; padding: 1px 8px; }
+  .add-cat { margin: 10px; width: calc(100% - 20px); }
+
+  main { padding: 20px 28px; max-width: 980px; }
+  .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .top h2 { margin: 0; font-size: 22px; flex: 1; min-width: 200px; }
+  .tools { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tools input, .tools select { padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); }
+  .tools input { flex: 1; min-width: 200px; }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+  .card-head { padding: 14px 16px; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; }
+  .card-head:hover { background: #fafbfc; }
+  .card-title { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+  .meta { font-size: 13px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 12px; white-space: nowrap; }
+  .chip.Positive { background: #dcfce7; color: var(--pos); }
+  .chip.Negative { background: #fee2e2; color: var(--neg); }
+  .chip.Neutral  { background: #eef0f3; color: var(--neu); }
+  .chip.Uncertain{ background: #fef3c7; color: var(--unc); }
+  .catchip { font-size: 12px; padding: 2px 9px; border-radius: 12px; color: #fff; }
+  .arrow { color: var(--muted); transition: transform .15s; margin-top: 2px; }
+  .card.open .arrow { transform: rotate(90deg); }
+  .card-body { display: none; padding: 0 16px 16px 16px; border-top: 1px solid var(--line); }
+  .card.open .card-body { display: block; }
+  .section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 4px; }
+  .card-body ul { margin: 4px 0 0; padding-left: 20px; }
+  .card-body li { margin: 3px 0; line-height: 1.45; }
+  .card-body a { color: var(--accent); word-break: break-all; }
+  .card-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; background: var(--panel);
+           border: 2px dashed var(--line); border-radius: 12px; }
+  .empty b { display: block; font-size: 17px; color: var(--text); margin-bottom: 6px; }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(20,25,35,.45); display: none;
+             align-items: flex-start; justify-content: center; padding: 30px 16px; overflow-y: auto; z-index: 10; }
+  .overlay.show { display: flex; }
+  .modal { background: var(--panel); border-radius: 14px; width: 100%; max-width: 680px; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  .modal h3 { margin: 0 0 16px; font-size: 19px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 5px; }
+  .field .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 9px 11px; border: 1px solid #d1d5db;
+       border-radius: 8px; font: inherit; background: #fff; }
+  .field textarea { min-height: 84px; resize: vertical; line-height: 1.45; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .outlook { display: flex; gap: 8px; flex-wrap: wrap; }
+  .outlook button { border: 1px solid var(--line); background: #fff; border-radius: 20px; padding: 6px 14px; }
+  .outlook button.sel.Positive { background: #dcfce7; border-color: var(--pos); color: var(--pos); font-weight: 600; }
+  .outlook button.sel.Negative { background: #fee2e2; border-color: var(--neg); color: var(--neg); font-weight: 600; }
+  .outlook button.sel.Neutral  { background: #eef0f3; border-color: var(--neu); color: var(--text); font-weight: 600; }
+  .outlook button.sel.Uncertain{ background: #fef3c7; border-color: var(--unc); color: var(--unc); font-weight: 600; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+  .colors { display: flex; gap: 8px; flex-wrap: wrap; }
+  .colors span { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
+  .colors span.sel { border-color: var(--text); }
+
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff;
+           padding: 10px 18px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); }
+    main { padding: 16px; }
+    .row { grid-template-columns: 1fr; }
+    header .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>📰 News Tracker</h1>
+  <span id="saveState">Loading…</span>
+  <span class="spacer"></span>
+  <button class="btn hide-sm" onclick="openFolder()" title="Open the folder with one readable file per section">📁 Open my files</button>
+  <button class="btn hide-sm" onclick="downloadBackup()" title="Download a copy of everything">⬇ Backup</button>
+</header>
+
+<div class="layout">
+  <aside>
+    <h2>Sections</h2>
+    <div id="catList"></div>
+    <button class="btn add-cat" onclick="openCatModal()">+ New section</button>
+  </aside>
+
+  <main>
+    <div class="top">
+      <h2 id="viewTitle">All articles</h2>
+      <button class="btn small" id="editCatBtn" onclick="openCatModal(currentCat)" style="display:none">✏️ Edit section</button>
+      <button class="btn primary" onclick="openArticleModal()">+ Add article</button>
+    </div>
+    <div class="tools">
+      <input id="search" placeholder="🔍 Search titles, notes, sources…" oninput="render()">
+      <select id="outlookFilter" onchange="render()">
+        <option value="">Any outlook</option>
+        <option>Positive</option><option>Negative</option><option>Neutral</option><option>Uncertain</option>
+      </select>
+      <select id="sortBy" onchange="render()">
+        <option value="new">Newest first</option>
+        <option value="old">Oldest first</option>
+        <option value="title">A → Z</option>
+      </select>
+    </div>
+    <div id="list"></div>
+  </main>
+</div>
+
+<!-- Article form -->
+<div class="overlay" id="articleOverlay">
+  <div class="modal">
+    <h3 id="articleModalTitle">Add article</h3>
+    <div class="field"><label>Headline *</label><input id="fTitle" placeholder="e.g. Fed holds rates steady as inflation cools"></div>
+    <div class="row">
+      <div class="field"><label>Section</label><select id="fCat"></select></div>
+      <div class="field"><label>Source</label><input id="fSource" list="sources" placeholder="e.g. Financial Times"></div>
+    </div>
+    <datalist id="sources">
+      <option>Financial Times</option><option>Bloomberg</option><option>Reuters</option><option>The Wall Street Journal</option>
+      <option>The Economist</option><option>BBC News</option><option>CNBC</option><option>The Guardian</option>
+      <option>New York Times</option><option>Nikkei Asia</option><option>Yahoo Finance</option>
+    </datalist>
+    <div class="row">
+      <div class="field"><label>Link <span class="hint">(optional)</span></label><input id="fUrl" placeholder="https://…"></div>
+      <div class="field"><label>Date</label><input id="fDate" type="date"></div>
+    </div>
+    <div class="field"><label>Key points <span class="hint">— one per line, each becomes a bullet</span></label>
+      <textarea id="fKey" placeholder="What happened?&#10;Key numbers&#10;Who is involved"></textarea></div>
+    <div class="field"><label>What this could mean for the market <span class="hint">— one per line</span></label>
+      <textarea id="fMarket" placeholder="e.g. Bank stocks may rise&#10;Bond yields could fall"></textarea></div>
+    <div class="field"><label>What this could mean for the global market <span class="hint">— one per line</span></label>
+      <textarea id="fGlobal" placeholder="e.g. Stronger dollar pressures emerging markets"></textarea></div>
+    <div class="field"><label>Overall outlook</label>
+      <div class="outlook" id="fOutlook">
+        <button type="button" data-v="Positive">▲ Positive</button>
+        <button type="button" data-v="Negative">▼ Negative</button>
+        <button type="button" data-v="Neutral">● Neutral</button>
+        <button type="button" data-v="Uncertain">? Uncertain</button>
+      </div>
+    </div>
+    <div class="field"><label>My notes <span class="hint">(optional)</span></label><textarea id="fNotes" placeholder="Anything else to remember…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModals()">Cancel</button>
+      <button class="btn primary" onclick="saveArticle()">Save article</button>
+    </div>
+  </div>
+</div>
+
+<!-- Section form -->
+<div class="overlay" id="catOverlay">
+  <div class="modal" style="max-width:440px">
+    <h3 id="catModalTitle">New section</h3>
+    <div class="field"><label>Section name</label><input id="cName" placeholder="e.g. China & Asia"></div>
+    <div class="field"><label>Colour</label><div class="colors" id="cColors"></div></div>
+    <div class="modal-actions">
+      <button class="btn danger" id="cDelete" onclick="deleteCat()" style="margin-right:auto">Delete section</button>
+      <button class="btn" onclick="closeModals()">Cancel</button>
+      <button class="btn primary" onclick="saveCat()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const COLORS = ["#2f6fed","#16a34a","#dc2626","#9333ea","#ea580c","#0891b2","#db2777","#ca8a04","#475569","#4f46e5"];
+let data = { categories: [], articles: [] };
+let currentCat = null;        // null = all articles
+let editingArticle = null;
+let editingCat = null;
+let chosenOutlook = "";
+let chosenColor = COLORS[0];
+let openIds = new Set();
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = p => p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const lines = t => String(t || "").split("\n").map(l => l.trim().replace(/^[-•*]\s*/, "")).filter(Boolean);
+const today = () => new Date().toISOString().slice(0, 10);
+const catById = id => data.categories.find(c => c.id === id);
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+// ---------- Loading & saving ----------
+async function load() {
+  try {
+    const r = await fetch("/api/data");
+    if (!r.ok) throw new Error((await r.json()).error || r.status);
+    data = await r.json();
+    setSaveState("All changes saved ✓");
+  } catch (e) {
+    setSaveState("⚠ Could not load saved data — is the program window still open?", true);
+  }
+  render();
+}
+
+async function persist() {
+  setSaveState("Saving…");
+  try { localStorage.setItem("newsTrackerBackup", JSON.stringify(data)); } catch (e) {}
+  try {
+    const r = await fetch("/api/data", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    const res = await r.json();
+    if (!res.ok) throw new Error(res.error);
+    setSaveState("All changes saved ✓ (" + res.savedAt + ")");
+  } catch (e) {
+    setSaveState("⚠ NOT SAVED — make sure the News Tracker window is still open, then try again", true);
+    alert("Your change could not be saved to disk.\n\nMake sure the News Tracker program window is still open (press Start again if needed), then save again.");
+  }
+}
+
+function setSaveState(msg, err) { const s = $("saveState"); s.textContent = msg; s.className = err ? "err" : ""; }
+
+// ---------- Rendering ----------
+function render() { renderCats(); renderList(); }
+
+function renderCats() {
+  const count = id => data.articles.filter(a => a.categoryId === id).length;
+  let html = `<div class="cat ${currentCat === null ? "active" : ""}" onclick="selectCat(null)">
+      <span class="dot" style="background:#1d2330"></span><span class="name">All articles</span>
+      <span class="count">${data.articles.length}</span></div>`;
+  for (const c of data.categories) {
+    html += `<div class="cat ${currentCat === c.id ? "active" : ""}" onclick="selectCat('${c.id}')">
+      <span class="dot" style="background:${esc(c.color)}"></span><span class="name">${esc(c.name)}</span>
+      <span class="count">${count(c.id)}</span></div>`;
+  }
+  $("catList").innerHTML = html;
+  const cat = catById(currentCat);
+  $("viewTitle").textContent = cat ? cat.name : "All articles";
+  $("editCatBtn").style.display = cat ? "" : "none";
+}
+
+function renderList() {
+  const q = $("search").value.trim().toLowerCase();
+  const of = $("outlookFilter").value;
+  let items = data.articles.filter(a => currentCat === null || a.categoryId === currentCat);
+  if (of) items = items.filter(a => a.outlook === of);
+  if (q) items = items.filter(a => [a.title, a.source, a.keyPoints, a.marketImpact, a.globalImpact, a.notes, a.url]
+                      .join(" ").toLowerCase().includes(q));
+  const s = $("sortBy").value;
+  items.sort((a, b) => {
+    if (s === "title") return (a.title || "").localeCompare(b.title || "");
+    const ka = (a.date || "") + (a.createdAt || ""), kb = (b.date || "") + (b.createdAt || "");
+    return s === "old" ? ka.localeCompare(kb) : kb.localeCompare(ka);
+  });
+
+  if (!items.length) {
+    const noneAtAll = !data.articles.filter(a => currentCat === null || a.categoryId === currentCat).length;
+    $("list").innerHTML = `<div class="empty">${noneAtAll
+      ? `<b>No articles here yet</b>Click <b style="display:inline;font-size:inherit">+ Add article</b> to save your first one.`
+      : `<b>No matches</b>Try a different search or filter.`}</div>`;
+    return;
+  }
+
+  $("list").innerHTML = items.map(a => {
+    const cat = catById(a.categoryId);
+    const bl = (label, text) => { const l = lines(text); return l.length
+      ? `<div class="section-label">${label}</div><ul>${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""; };
+    const link = a.url ? `<div class="section-label">Link</div><a href="${esc(/^https?:\/\//i.test(a.url) ? a.url : "https://" + a.url)}" target="_blank" rel="noopener">${esc(a.url)}</a>` : "";
+    return `<div class="card ${openIds.has(a.id) ? "open" : ""}" id="card-${a.id}">
+      <div class="card-head" onclick="toggleCard('${a.id}')">
+        <span class="arrow">▶</span>
+        <div style="flex:1;min-width:0">
+          <div class="card-title">${esc(a.title)}</div>
+          <div class="meta">
+            ${a.source ? `<span>${esc(a.source)}</span>` : ""}
+            ${a.date ? `<span>· ${esc(formatDate(a.date))}</span>` : ""}
+            ${currentCat === null && cat ? `<span class="catchip" style="background:${esc(cat.color)}">${esc(cat.name)}</span>` : ""}
+            ${a.outlook ? `<span class="chip ${esc(a.outlook)}">${esc(a.outlook)}</span>` : ""}
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        ${bl("Key points", a.keyPoints)}
+        ${bl("What this could mean for the market", a.marketImpact)}
+        ${bl("What this could mean for the global market", a.globalImpact)}
+        ${bl("My notes", a.notes)}
+        ${link}
+        <div class="card-actions">
+          <button class="btn small" onclick="openArticleModal('${a.id}')">✏️ Edit</button>
+          <button class="btn small danger" onclick="deleteArticle('${a.id}')">🗑 Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function formatDate(d) {
+  const dt = new Date(d + "T00:00:00");
+  return isNaN(dt) ? d : dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+function selectCat(id) { currentCat = id; render(); }
+function toggleCard(id) {
+  openIds.has(id) ? openIds.delete(id) : openIds.add(id);
+  $("card-" + id).classList.toggle("open");
+}
+
+// ---------- Articles ----------
+function openArticleModal(id) {
+  if (!data.categories.length) { alert("Create a section first (left side, “+ New section”)."); return; }
+  editingArticle = id ? data.articles.find(a => a.id === id) : null;
+  const a = editingArticle || {};
+  $("articleModalTitle").textContent = editingArticle ? "Edit article" : "Add article";
+  $("fCat").innerHTML = data.categories.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  $("fCat").value = a.categoryId || currentCat || data.categories[0].id;
+  $("fTitle").value = a.title || "";
+  $("fSource").value = a.source || "";
+  $("fUrl").value = a.url || "";
+  $("fDate").value = a.date || today();
+  $("fKey").value = a.keyPoints || "";
+  $("fMarket").value = a.marketImpact || "";
+  $("fGlobal").value = a.globalImpact || "";
+  $("fNotes").value = a.notes || "";
+  setOutlook(a.outlook || "");
+  $("articleOverlay").classList.add("show");
+  setTimeout(() => $("fTitle").focus(), 50);
+}
+
+function setOutlook(v) {
+  chosenOutlook = v;
+  document.querySelectorAll("#fOutlook button").forEach(b => {
+    b.className = b.dataset.v === v ? "sel " + v : "";
+  });
+}
+document.querySelectorAll("#fOutlook button").forEach(b =>
+  b.onclick = () => setOutlook(chosenOutlook === b.dataset.v ? "" : b.dataset.v));
+
+async function saveArticle() {
+  const title = $("fTitle").value.trim();
+  if (!title) { alert("Please add a headline."); $("fTitle").focus(); return; }
+  const fields = {
+    title, categoryId: $("fCat").value, source: $("fSource").value.trim(), url: $("fUrl").value.trim(),
+    date: $("fDate").value, keyPoints: $("fKey").value, marketImpact: $("fMarket").value,
+    globalImpact: $("fGlobal").value, notes: $("fNotes").value, outlook: chosenOutlook,
+    updatedAt: new Date().toISOString(),
+  };
+  if (editingArticle) Object.assign(editingArticle, fields);
+  else {
+    const a = { id: uid("a"), createdAt: new Date().toISOString(), ...fields };
+    data.articles.push(a);
+    openIds.add(a.id);
+  }
+  closeModals(true);
+  render();
+  await persist();
+  toast("Article saved");
+}
+
+async function deleteArticle(id) {
+  const a = data.articles.find(x => x.id === id);
+  if (!a || !confirm(`Delete “${a.title}”?\nThis cannot be undone.`)) return;
+  data.articles = data.articles.filter(x => x.id !== id);
+  render();
+  await persist();
+  toast("Article deleted");
+}
+
+// ---------- Sections ----------
+function openCatModal(id) {
+  editingCat = id ? catById(id) : null;
+  $("catModalTitle").textContent = editingCat ? "Edit section" : "New section";
+  $("cName").value = editingCat ? editingCat.name : "";
+  $("cDelete").style.display = editingCat ? "" : "none";
+  chosenColor = editingCat ? editingCat.color : COLORS[data.categories.length % COLORS.length];
+  renderColors();
+  $("catOverlay").classList.add("show");
+  setTimeout(() => $("cName").focus(), 50);
+}
+
+function renderColors() {
+  $("cColors").innerHTML = COLORS.map(c =>
+    `<span style="background:${c}" class="${c === chosenColor ? "sel" : ""}" onclick="chosenColor='${c}';renderColors()"></span>`).join("");
+}
+
+async function saveCat() {
+  const name = $("cName").value.trim();
+  if (!name) { alert("Please give the section a name."); return; }
+  const clash = data.categories.find(c => c.name.toLowerCase() === name.toLowerCase() && c !== editingCat);
+  if (clash) { alert("You already have a section with that name."); return; }
+  if (editingCat) Object.assign(editingCat, { name, color: chosenColor });
+  else { const c = { id: uid("c"), name, color: chosenColor }; data.categories.push(c); currentCat = c.id; }
+  closeModals(true);
+  render();
+  await persist();
+  toast("Section saved");
+}
+
+async function deleteCat() {
+  const n = data.articles.filter(a => a.categoryId === editingCat.id).length;
+  const msg = n
+    ? `Delete the section “${editingCat.name}” AND its ${n} article(s)?\nThis cannot be undone.`
+    : `Delete the section “${editingCat.name}”?`;
+  if (!confirm(msg)) return;
+  data.articles = data.articles.filter(a => a.categoryId !== editingCat.id);
+  data.categories = data.categories.filter(c => c !== editingCat);
+  currentCat = null;
+  closeModals(true);
+  render();
+  await persist();
+  toast("Section deleted");
+}
+
+// ---------- Misc ----------
+function formDirty() {
+  if (!$("articleOverlay").classList.contains("show")) return false;
+  return ["fTitle", "fKey", "fMarket", "fGlobal", "fNotes"].some(id => $(id).value.trim() !== ((editingArticle || {})[
+    { fTitle: "title", fKey: "keyPoints", fMarket: "marketImpact", fGlobal: "globalImpact", fNotes: "notes" }[id]] || "").trim());
+}
+
+function closeModals(force) {
+  if (!force && formDirty() && !confirm("Close without saving? What you typed will be lost.")) return;
+  document.querySelectorAll(".overlay").forEach(o => o.classList.remove("show"));
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeModals();
+  if (e.key === "Enter" && $("catOverlay").classList.contains("show")) saveCat();
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && $("articleOverlay").classList.contains("show")) saveArticle();
+});
+window.addEventListener("beforeunload", e => { if (formDirty()) { e.preventDefault(); e.returnValue = ""; } });
+
+function openFolder() { fetch("/api/open-folder").catch(() => {}); toast("Opening your files folder…"); }
+
+function downloadBackup() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `news-tracker-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+load();
+</script>
+</body>
+</html>
