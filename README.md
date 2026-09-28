@@ -35,3 +35,9 @@ Every change is saved to your computer straight away. The top bar shows **"All c
 - **⬇ Backup** downloads a full copy of everything.
 
 Your saved articles are private to your computer and are not uploaded to GitHub (`data/` and `My News Files/` are in `.gitignore`).
+
+## 📱 Use it inside the Claude app (no install)
+
+There is also a version that runs inside the Claude app, so you can open it on your phone or computer without installing anything: https://claude.ai/artifact/RkKhRbrAGHXgEWm6dnaGHC
+
+Its articles are saved to your Claude account, not to this folder. The code for that version is in `artifact/news-tracker.html`.

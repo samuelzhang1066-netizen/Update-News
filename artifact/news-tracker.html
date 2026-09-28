@@ -1,0 +1,579 @@
+<title>Market News Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,650&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f3f5f7; --panel: #ffffff; --ink: #14202e; --muted: #5d6b7a; --line: #dfe4ea;
+    --accent: #1f5c99; --accent-ink: #ffffff; --accent-soft: #e3edf7; --hover: #eef2f6;
+    --pos: #157a45; --pos-bg: #dcf2e5; --neg: #b3261e; --neg-bg: #fbe3e1;
+    --neu: #4b5866; --neu-bg: #e9edf1; --unc: #95600a; --unc-bg: #fbeed3;
+    --shadow: 0 18px 50px rgba(15, 30, 50, .22); --scrim: rgba(12, 20, 30, .5);
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f1620; --panel: #17212d; --ink: #e6ebf1; --muted: #93a1b0; --line: #2a3644;
+      --accent: #6aa6e0; --accent-ink: #0b1520; --accent-soft: #1c3048; --hover: #1e2a38;
+      --pos: #5fd394; --pos-bg: #173628; --neg: #f28b82; --neg-bg: #3d1f1d;
+      --neu: #b4c0cc; --neu-bg: #25303c; --unc: #f0c16a; --unc-bg: #3a2e15;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .5); --scrim: rgba(0, 0, 0, .6);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1620; --panel: #17212d; --ink: #e6ebf1; --muted: #93a1b0; --line: #2a3644;
+    --accent: #6aa6e0; --accent-ink: #0b1520; --accent-soft: #1c3048; --hover: #1e2a38;
+    --pos: #5fd394; --pos-bg: #173628; --neg: #f28b82; --neg-bg: #3d1f1d;
+    --neu: #b4c0cc; --neu-bg: #25303c; --unc: #f0c16a; --unc-bg: #3a2e15;
+    --shadow: 0 18px 50px rgba(0, 0, 0, .5); --scrim: rgba(0, 0, 0, .6);
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.45; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 60px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 2px solid var(--ink); margin-bottom: 18px; }
+  header h1 { font-family: var(--serif); font-weight: 650; font-size: 28px; margin: 0; letter-spacing: -.01em; }
+  #saveState { font-size: 13px; color: var(--muted); }
+  #saveState.err { color: var(--neg); font-weight: 600; }
+  .spacer { flex: 1; }
+
+  .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 13px; }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { color: var(--neg); }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
+  .label { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  aside .label { margin: 0 10px 8px; }
+  .cats { display: grid; gap: 2px; }
+  .cat { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; border: 0; background: none; text-align: left; width: 100%; }
+  .cat:hover { background: var(--hover); }
+  .cat.active { background: var(--accent-soft); font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .cat .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .cat .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .add-cat { margin-top: 10px; width: 100%; }
+
+  .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .top h2 { font-family: var(--serif); font-weight: 650; font-size: 24px; margin: 0; flex: 1; min-width: 180px; text-wrap: balance; }
+  .tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tools input, .tools select { padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .tools input { flex: 1 1 220px; min-width: 0; }
+
+  .list { display: grid; gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .card-head { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; width: 100%; border: 0; background: none; text-align: left; }
+  .card-head:hover { background: var(--hover); }
+  .arrow { color: var(--muted); transition: transform .15s; margin-top: 3px; font-size: 12px; }
+  .card.open .arrow { transform: rotate(90deg); }
+  .card-title { font-family: var(--serif); font-weight: 650; font-size: 18px; line-height: 1.3; margin-bottom: 5px; overflow-wrap: anywhere; }
+  .meta { font-size: 13px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 12px; white-space: nowrap; }
+  .chip.Positive { background: var(--pos-bg); color: var(--pos); }
+  .chip.Negative { background: var(--neg-bg); color: var(--neg); }
+  .chip.Neutral { background: var(--neu-bg); color: var(--neu); }
+  .chip.Uncertain { background: var(--unc-bg); color: var(--unc); }
+  .catchip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .catchip .dot { width: 8px; height: 8px; }
+  .card-body { padding: 4px 16px 16px 40px; border-top: 1px solid var(--line); }
+  .card-body section { margin-top: 12px; max-width: 70ch; }
+  .card-body ul { margin: 4px 0 0; padding-left: 20px; }
+  .card-body li { margin: 3px 0; overflow-wrap: anywhere; }
+  .card-body a { color: var(--accent); overflow-wrap: anywhere; }
+  .card-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  .empty { text-align: center; color: var(--muted); padding: 48px 20px; background: var(--panel); border: 2px dashed var(--line); border-radius: 10px; }
+  .empty strong { display: block; font-family: var(--serif); font-size: 19px; color: var(--ink); margin-bottom: 6px; }
+  .notice { background: var(--unc-bg); color: var(--unc); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; }
+
+  .overlay { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; z-index: 10; }
+  .modal { background: var(--panel); border-radius: 12px; width: 100%; max-width: 660px; padding: 22px; box-shadow: var(--shadow); }
+  .modal.narrow { max-width: 430px; }
+  .modal h3 { font-family: var(--serif); font-weight: 650; font-size: 22px; margin: 0 0 16px; }
+  .modal p { margin: 0 0 16px; }
+  .form { display: grid; gap: 14px; }
+  .field label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 5px; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 12.5px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+  .field textarea { min-height: 84px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .outlook { display: flex; gap: 8px; flex-wrap: wrap; }
+  .outlook button { border: 1px solid var(--line); background: var(--panel); border-radius: 20px; padding: 6px 14px; }
+  .outlook button.sel { font-weight: 600; }
+  .outlook button.sel.Positive { background: var(--pos-bg); border-color: var(--pos); color: var(--pos); }
+  .outlook button.sel.Negative { background: var(--neg-bg); border-color: var(--neg); color: var(--neg); }
+  .outlook button.sel.Neutral { background: var(--neu-bg); border-color: var(--neu); color: var(--neu); }
+  .outlook button.sel.Uncertain { background: var(--unc-bg); border-color: var(--unc); color: var(--unc); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .modal-actions .left { margin-right: auto; }
+  .colors { display: flex; gap: 8px; flex-wrap: wrap; }
+  .colors button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid transparent; padding: 0; }
+  .colors button.sel { border-color: var(--ink); }
+  .err-msg { color: var(--neg); font-size: 13px; margin-top: 4px; }
+
+  #toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; gap: 16px; }
+    .cats { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cat { width: auto; border: 1px solid var(--line); background: var(--panel); padding: 6px 11px; border-radius: 18px; }
+    .cat .name { flex: none; }
+    .add-cat { width: auto; margin-top: 8px; }
+    .row { grid-template-columns: 1fr; }
+    .card-body { padding-left: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Market News Desk</h1>
+    <span id="saveState">Connecting…</span>
+    <span class="spacer"></span>
+    <button class="btn" id="exportBtn" hidden>Download notes</button>
+  </header>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <div class="layout">
+    <aside>
+      <div class="label">Sections</div>
+      <div class="cats" id="catList"></div>
+      <button class="btn add-cat" id="newCatBtn">+ New section</button>
+    </aside>
+
+    <main>
+      <div class="top">
+        <h2 id="viewTitle">All articles</h2>
+        <button class="btn small" id="editCatBtn" hidden>Edit section</button>
+        <button class="btn primary" id="addBtn">+ Add article</button>
+      </div>
+      <div class="tools">
+        <input id="search" type="search" placeholder="Search headlines, notes, sources…" aria-label="Search">
+        <select id="outlookFilter" aria-label="Filter by outlook">
+          <option value="">Any outlook</option>
+          <option>Positive</option><option>Negative</option><option>Neutral</option><option>Uncertain</option>
+        </select>
+        <select id="sortBy" aria-label="Sort">
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="title">A to Z</option>
+        </select>
+      </div>
+      <div class="list" id="list"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Article form -->
+<div class="overlay" id="articleOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="articleModalTitle">
+    <h3 id="articleModalTitle">Add article</h3>
+    <form class="form" id="articleForm">
+      <div class="field"><label for="fTitle">Headline</label>
+        <input id="fTitle" placeholder="e.g. Fed holds rates steady as inflation cools">
+        <div class="err-msg" id="fTitleErr" hidden>Add a headline to save this article.</div></div>
+      <div class="row">
+        <div class="field"><label for="fCat">Section</label><select id="fCat"></select></div>
+        <div class="field"><label for="fSource">Source</label><input id="fSource" list="sources" placeholder="e.g. Financial Times"></div>
+      </div>
+      <datalist id="sources">
+        <option>Financial Times</option><option>Bloomberg</option><option>Reuters</option><option>The Wall Street Journal</option>
+        <option>The Economist</option><option>BBC News</option><option>CNBC</option><option>The Guardian</option>
+        <option>New York Times</option><option>Nikkei Asia</option><option>Yahoo Finance</option>
+      </datalist>
+      <div class="row">
+        <div class="field"><label for="fUrl">Link <span class="hint">(optional)</span></label><input id="fUrl" inputmode="url" placeholder="https://…"></div>
+        <div class="field"><label for="fDate">Date</label><input id="fDate" type="date"></div>
+      </div>
+      <div class="field"><label for="fKey">Key points <span class="hint">One per line. Each line becomes a bullet.</span></label>
+        <textarea id="fKey" placeholder="What happened?&#10;Key numbers&#10;Who is involved"></textarea></div>
+      <div class="field"><label for="fMarket">What this could mean for the market <span class="hint">One per line</span></label>
+        <textarea id="fMarket" placeholder="e.g. Bank stocks may rise&#10;Bond yields could fall"></textarea></div>
+      <div class="field"><label for="fGlobal">What this could mean for the global market <span class="hint">One per line</span></label>
+        <textarea id="fGlobal" placeholder="e.g. Stronger dollar pressures emerging markets"></textarea></div>
+      <div class="field"><label>Overall outlook</label>
+        <div class="outlook" id="fOutlook">
+          <button type="button" data-v="Positive">▲ Positive</button>
+          <button type="button" data-v="Negative">▼ Negative</button>
+          <button type="button" data-v="Neutral">● Neutral</button>
+          <button type="button" data-v="Uncertain">? Uncertain</button>
+        </div></div>
+      <div class="field"><label for="fNotes">My notes <span class="hint">(optional)</span></label>
+        <textarea id="fNotes" placeholder="Anything else to remember…"></textarea></div>
+    </form>
+    <div class="modal-actions">
+      <button class="btn" id="articleCancel">Cancel</button>
+      <button class="btn primary" id="articleSave">Save article</button>
+    </div>
+  </div>
+</div>
+
+<!-- Section form -->
+<div class="overlay" id="catOverlay" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="catModalTitle">
+    <h3 id="catModalTitle">New section</h3>
+    <div class="form">
+      <div class="field"><label for="cName">Section name</label><input id="cName" placeholder="e.g. China & Asia">
+        <div class="err-msg" id="cNameErr" hidden></div></div>
+      <div class="field"><label>Colour</label><div class="colors" id="cColors"></div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger left" id="cDelete">Delete section</button>
+      <button class="btn" id="catCancel">Cancel</button>
+      <button class="btn primary" id="catSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="overlay" id="confirmOverlay" hidden>
+  <div class="modal narrow" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p id="confirmText"></p>
+    <div class="modal-actions">
+      <button class="btn" id="confirmNo">Keep it</button>
+      <button class="btn primary" id="confirmYes" style="background:var(--neg);border-color:var(--neg);color:#fff">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+const COLORS = ["#2f6fed","#16a34a","#dc2626","#9333ea","#ea580c","#0891b2","#db2777","#ca8a04","#64748b","#4f46e5"];
+const state = { categories: [], articles: [] };
+let db = null;
+let currentCat = null;
+let editingArticle = null, editingCat = null;
+let chosenOutlook = "", chosenColor = COLORS[0];
+const openIds = new Set();
+let loaded = { categories: false, articles: false };
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = p => p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const lines = t => String(t || "").split("\n").map(l => l.trim().replace(/^[-•*]\s*/, "")).filter(Boolean);
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const catById = id => state.categories.find(c => c.id === id);
+const show = (el, on) => { el.hidden = !on; };
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1800);
+}
+function setSaveState(msg, err) { const s = $("saveState"); s.textContent = msg; s.className = err ? "err" : ""; }
+
+// ---------- Storage ----------
+async function write(fn, okMsg) {
+  if (!db) { setSaveState("Not saved: storage isn't available here", true); return false; }
+  setSaveState("Saving…");
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await fn();
+      setSaveState("All changes saved ✓");
+      if (okMsg) toast(okMsg);
+      return true;
+    } catch (e) {
+      if (e && e.code === "unavailable" && attempt === 0) { await new Promise(r => setTimeout(r, 600 + Math.random() * 600)); continue; }
+      const why = e && e.code === "quota_exceeded" ? "storage is full. Delete some old articles and try again."
+        : e && e.code === "invalid_argument" ? "you don't have permission to change this, or the entry is too large."
+        : "the connection dropped. Try again in a moment.";
+      setSaveState("Not saved: " + why, true);
+      return false;
+    }
+  }
+}
+
+function subscribe() {
+  db.collection("categories").onSnapshot(snap => {
+    state.categories = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name).localeCompare(String(b.name)));
+    loaded.categories = true; afterLoad();
+  }, onSubError);
+  db.collection("articles").onSnapshot(snap => {
+    state.articles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    loaded.articles = true; afterLoad();
+  }, onSubError);
+}
+function onSubError() { setSaveState("Lost connection to your saved articles. Reload the page.", true); }
+function afterLoad() {
+  if (!loaded.categories || !loaded.articles) return;
+  if (currentCat && !catById(currentCat)) currentCat = null;
+  if ($("saveState").textContent === "Connecting…") setSaveState("All changes saved ✓");
+  render();
+}
+
+// ---------- Rendering ----------
+function render() { renderCats(); renderList(); }
+
+function renderCats() {
+  const count = id => state.articles.filter(a => a.categoryId === id).length;
+  let html = `<button class="cat ${currentCat === null ? "active" : ""}" data-cat="">
+      <span class="dot" style="background:var(--ink)"></span><span class="name">All articles</span>
+      <span class="count">${state.articles.length}</span></button>`;
+  for (const c of state.categories) {
+    html += `<button class="cat ${currentCat === c.id ? "active" : ""}" data-cat="${esc(c.id)}">
+      <span class="dot" style="background:${esc(c.color)}"></span><span class="name">${esc(c.name)}</span>
+      <span class="count">${count(c.id)}</span></button>`;
+  }
+  $("catList").innerHTML = html;
+  const cat = catById(currentCat);
+  $("viewTitle").textContent = cat ? cat.name : "All articles";
+  show($("editCatBtn"), !!cat);
+}
+
+function formatDate(d) {
+  const dt = new Date(d + "T00:00:00");
+  return isNaN(dt) ? d : dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+function renderList() {
+  if (!loaded.categories || !loaded.articles) {
+    $("list").innerHTML = db === null ? "" : `<div class="empty"><strong>Loading your articles…</strong></div>`;
+    return;
+  }
+  const q = $("search").value.trim().toLowerCase();
+  const of = $("outlookFilter").value;
+  const inView = state.articles.filter(a => currentCat === null || a.categoryId === currentCat);
+  let items = inView;
+  if (of) items = items.filter(a => a.outlook === of);
+  if (q) items = items.filter(a => [a.title, a.source, a.keyPoints, a.marketImpact, a.globalImpact, a.notes, a.url].join(" ").toLowerCase().includes(q));
+  const s = $("sortBy").value;
+  items = [...items].sort((a, b) => {
+    if (s === "title") return String(a.title || "").localeCompare(String(b.title || ""));
+    const ka = (a.date || "") + (a.createdAt || ""), kb = (b.date || "") + (b.createdAt || "");
+    return s === "old" ? ka.localeCompare(kb) : kb.localeCompare(ka);
+  });
+
+  if (!items.length) {
+    $("list").innerHTML = `<div class="empty">${inView.length
+      ? `<strong>No matches</strong>Try a different search or filter.`
+      : `<strong>No articles here yet</strong>Tap “+ Add article” to save your first one.`}</div>`;
+    return;
+  }
+
+  $("list").innerHTML = items.map(a => {
+    const cat = catById(a.categoryId);
+    const block = (label, text) => { const l = lines(text); return l.length
+      ? `<section><div class="label">${label}</div><ul>${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""; };
+    const href = a.url ? (/^https?:\/\//i.test(a.url) ? a.url : "https://" + a.url) : "";
+    const open = openIds.has(a.id);
+    return `<article class="card ${open ? "open" : ""}">
+      <button class="card-head" data-toggle="${esc(a.id)}" aria-expanded="${open}">
+        <span class="arrow">▶</span>
+        <span style="flex:1;min-width:0">
+          <span class="card-title" style="display:block">${esc(a.title)}</span>
+          <span class="meta">
+            ${a.source ? `<span>${esc(a.source)}</span>` : ""}
+            ${a.date ? `<span>· ${esc(formatDate(a.date))}</span>` : ""}
+            ${currentCat === null && cat ? `<span class="catchip"><span class="dot" style="background:${esc(cat.color)}"></span>${esc(cat.name)}</span>` : ""}
+            ${a.outlook ? `<span class="chip ${esc(a.outlook)}">${esc(a.outlook)}</span>` : ""}
+          </span>
+        </span>
+      </button>
+      <div class="card-body" ${open ? "" : "hidden"}>
+        ${block("Key points", a.keyPoints)}
+        ${block("What this could mean for the market", a.marketImpact)}
+        ${block("What this could mean for the global market", a.globalImpact)}
+        ${block("My notes", a.notes)}
+        ${href ? `<section><div class="label">Link</div><a href="${esc(href)}" target="_blank" rel="noopener">${esc(a.url)}</a></section>` : ""}
+        <div class="card-actions">
+          <button class="btn small" data-edit="${esc(a.id)}">Edit</button>
+          <button class="btn small danger" data-del="${esc(a.id)}">Delete</button>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+}
+
+// ---------- Confirm dialog ----------
+function confirmBox(title, text, yesLabel = "Delete") {
+  return new Promise(resolve => {
+    $("confirmTitle").textContent = title; $("confirmText").textContent = text; $("confirmYes").textContent = yesLabel;
+    show($("confirmOverlay"), true);
+    const done = v => { show($("confirmOverlay"), false); $("confirmYes").onclick = $("confirmNo").onclick = null; resolve(v); };
+    $("confirmYes").onclick = () => done(true);
+    $("confirmNo").onclick = () => done(false);
+    $("confirmNo").focus();
+  });
+}
+
+// ---------- Articles ----------
+function openArticleModal(id) {
+  if (!state.categories.length) { openCatModal(); toast("Create a section first"); return; }
+  editingArticle = id ? state.articles.find(a => a.id === id) : null;
+  const a = editingArticle || {};
+  $("articleModalTitle").textContent = editingArticle ? "Edit article" : "Add article";
+  $("fCat").innerHTML = state.categories.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+  $("fCat").value = a.categoryId || currentCat || state.categories[0].id;
+  $("fTitle").value = a.title || "";
+  $("fSource").value = a.source || "";
+  $("fUrl").value = a.url || "";
+  $("fDate").value = a.date || today();
+  $("fKey").value = a.keyPoints || "";
+  $("fMarket").value = a.marketImpact || "";
+  $("fGlobal").value = a.globalImpact || "";
+  $("fNotes").value = a.notes || "";
+  show($("fTitleErr"), false);
+  setOutlook(a.outlook || "");
+  show($("articleOverlay"), true);
+  $("articleOverlay").scrollTop = 0;
+  setTimeout(() => $("fTitle").focus(), 30);
+}
+
+function setOutlook(v) {
+  chosenOutlook = v;
+  document.querySelectorAll("#fOutlook button").forEach(b => { b.className = b.dataset.v === v ? "sel " + v : ""; });
+}
+
+async function saveArticle() {
+  const title = $("fTitle").value.trim();
+  if (!title) { show($("fTitleErr"), true); $("fTitle").focus(); return; }
+  const now = new Date().toISOString();
+  const body = {
+    title, categoryId: $("fCat").value, source: $("fSource").value.trim(), url: $("fUrl").value.trim(),
+    date: $("fDate").value, keyPoints: $("fKey").value, marketImpact: $("fMarket").value,
+    globalImpact: $("fGlobal").value, notes: $("fNotes").value, outlook: chosenOutlook,
+    createdAt: editingArticle?.createdAt || now, updatedAt: now,
+  };
+  const id = editingArticle ? editingArticle.id : uid("a");
+  const ok = await write(() => db.collection("articles").doc(id).set(body), "Article saved");
+  if (ok) { openIds.add(id); show($("articleOverlay"), false); render(); }
+}
+
+async function deleteArticle(id) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a || !(await confirmBox("Delete this article?", `“${a.title}” will be removed for good.`))) return;
+  openIds.delete(id);
+  await write(() => db.collection("articles").doc(id).delete(), "Article deleted");
+}
+
+// ---------- Sections ----------
+function openCatModal(id) {
+  editingCat = id ? catById(id) : null;
+  $("catModalTitle").textContent = editingCat ? "Edit section" : "New section";
+  $("cName").value = editingCat ? editingCat.name : "";
+  show($("cNameErr"), false);
+  show($("cDelete"), !!editingCat);
+  chosenColor = editingCat ? editingCat.color : COLORS[state.categories.length % COLORS.length];
+  renderColors();
+  show($("catOverlay"), true);
+  setTimeout(() => $("cName").focus(), 30);
+}
+
+function renderColors() {
+  $("cColors").innerHTML = COLORS.map(c =>
+    `<button type="button" aria-label="Colour ${c}" data-color="${c}" style="background:${c}" class="${c === chosenColor ? "sel" : ""}"></button>`).join("");
+}
+
+async function saveCat() {
+  const name = $("cName").value.trim();
+  const err = $("cNameErr");
+  if (!name) { err.textContent = "Give the section a name."; show(err, true); return; }
+  if (state.categories.some(c => c.name.toLowerCase() === name.toLowerCase() && c !== editingCat)) {
+    err.textContent = "You already have a section with that name."; show(err, true); return;
+  }
+  const id = editingCat ? editingCat.id : uid("c");
+  const order = editingCat ? (editingCat.order ?? 0) : Math.max(0, ...state.categories.map(c => c.order ?? 0)) + 1;
+  const ok = await write(() => db.collection("categories").doc(id).set({ name, color: chosenColor, order }), "Section saved");
+  if (ok) { if (!editingCat) currentCat = id; show($("catOverlay"), false); render(); }
+}
+
+async function deleteCat() {
+  const cat = editingCat;
+  const arts = state.articles.filter(a => a.categoryId === cat.id);
+  const yes = await confirmBox("Delete this section?", arts.length
+    ? `“${cat.name}” and its ${arts.length} article${arts.length === 1 ? "" : "s"} will be removed for good.`
+    : `“${cat.name}” will be removed.`);
+  if (!yes) return;
+  const ok = await write(async () => {
+    for (const a of arts) await db.collection("articles").doc(a.id).delete();
+    await db.collection("categories").doc(cat.id).delete();
+  }, "Section deleted");
+  if (ok) { currentCat = null; show($("catOverlay"), false); render(); }
+}
+
+// ---------- Export ----------
+function buildMarkdown() {
+  const out = ["# Market News Desk", ""];
+  for (const c of state.categories) {
+    const arts = state.articles.filter(a => a.categoryId === c.id)
+      .sort((a, b) => ((b.date || "") + (b.createdAt || "")).localeCompare((a.date || "") + (a.createdAt || "")));
+    out.push(`# ${c.name}`, "");
+    if (!arts.length) out.push("_No articles yet._", "");
+    for (const a of arts) {
+      out.push(`## ${a.title}`, "");
+      const meta = [a.source && `**Source:** ${a.source}`, a.date && `**Date:** ${a.date}`, a.outlook && `**Outlook:** ${a.outlook}`].filter(Boolean);
+      if (meta.length) out.push(meta.join(" | "), "");
+      if (a.url) out.push(`**Link:** ${a.url}`, "");
+      for (const [label, key] of [["Key points","keyPoints"],["What this could mean for the market","marketImpact"],["What this could mean for the global market","globalImpact"],["My notes","notes"]]) {
+        const l = lines(a[key]); if (l.length) out.push(`**${label}:**`, ...l.map(x => "- " + x), "");
+      }
+      out.push("---", "");
+    }
+  }
+  return out.join("\n");
+}
+
+// ---------- Events ----------
+$("catList").addEventListener("click", e => {
+  const b = e.target.closest("[data-cat]"); if (!b) return;
+  currentCat = b.dataset.cat || null; render();
+});
+$("list").addEventListener("click", e => {
+  const t = e.target.closest("[data-toggle]");
+  if (t) { const id = t.dataset.toggle; openIds.has(id) ? openIds.delete(id) : openIds.add(id); renderList(); return; }
+  const ed = e.target.closest("[data-edit]"); if (ed) return openArticleModal(ed.dataset.edit);
+  const del = e.target.closest("[data-del]"); if (del) return deleteArticle(del.dataset.del);
+});
+$("cColors").addEventListener("click", e => { const b = e.target.closest("[data-color]"); if (b) { chosenColor = b.dataset.color; renderColors(); } });
+document.querySelectorAll("#fOutlook button").forEach(b => b.onclick = () => setOutlook(chosenOutlook === b.dataset.v ? "" : b.dataset.v));
+$("addBtn").onclick = () => openArticleModal();
+$("newCatBtn").onclick = () => openCatModal();
+$("editCatBtn").onclick = () => openCatModal(currentCat);
+$("articleSave").onclick = saveArticle;
+$("articleCancel").onclick = () => show($("articleOverlay"), false);
+$("articleForm").addEventListener("submit", e => e.preventDefault());
+$("catSave").onclick = saveCat;
+$("catCancel").onclick = () => show($("catOverlay"), false);
+$("cDelete").onclick = deleteCat;
+$("cName").addEventListener("keydown", e => { if (e.key === "Enter") saveCat(); });
+["search", "outlookFilter", "sortBy"].forEach(id => $(id).addEventListener("input", renderList));
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!$("confirmOverlay").hidden) return $("confirmNo").click();
+  show($("catOverlay"), false);
+});
+
+// ---------- Start ----------
+render();
+(async () => {
+  db = await window.claude?.use?.("db") ?? null;
+  if (!db) {
+    setSaveState("Saving unavailable", true);
+    $("notice").textContent = "Your saved articles can't be reached in this view. Open this page from your Claude artifacts while signed in to see and save them.";
+    show($("notice"), true);
+    loaded = { categories: true, articles: true };
+    render();
+    return;
+  }
+  subscribe();
+  const downloads = await window.claude.use("downloads");
+  if (downloads) {
+    show($("exportBtn"), true);
+    $("exportBtn").onclick = async () => {
+      try { await downloads.save({ filename: `news-notes-${today()}.md`, data: buildMarkdown() }); }
+      catch (e) { if (e?.code !== "declined") toast("Download didn't work. Try again."); }
+    };
+  }
+})();
+</script>
